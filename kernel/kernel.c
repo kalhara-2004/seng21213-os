@@ -24,6 +24,14 @@
 #include "vga.h"
 #include "keyboard.h"
 #include "../include/types.h"
+#include "process.h"
+#include "idt.h"
+#include "pic.h"
+#include "timer.h"
+#include "scheduler.h"
+
+static volatile unsigned int process_one_count = 0;
+static volatile unsigned int process_two_count = 0;
 
 /* ---------------------------------------------------------------------------
  * Forward declarations of shell commands
@@ -33,7 +41,7 @@ static void cmd_clear(void);
 static void cmd_about(void);
 static void cmd_echo(const char *args);
 static void cmd_mem(void);
-
+extern void irq0_handler(void);
 /* ---------------------------------------------------------------------------
  * Utility: minimal string helpers (no libc in a freestanding kernel!)
  * --------------------------------------------------------------------------*/
@@ -165,6 +173,70 @@ static void cmd_mem(void) {
 static char  shell_buf[256];
 static char  prompt[] = "\n  ksh> ";
 
+static const char *process_state_name(process_state_t state)
+{
+    switch (state) {
+        case PROCESS_READY:
+            return "READY";
+        case PROCESS_RUNNING:
+            return "RUNNING";
+        case PROCESS_BLOCKED:
+            return "BLOCKED";
+        case PROCESS_TERMINATED:
+            return "TERMINATED";
+        default:
+            return "UNUSED";
+    }
+}
+
+static void print_number(unsigned int value)
+{
+    char buffer[12];
+    char output[2];
+    int i = 0;
+    int j;
+
+    output[1] = '\0';
+
+    if (value == 0) {
+        vga_puts("0");
+        return;
+    }
+
+    while (value > 0 && i < 11) {
+        buffer[i++] = '0' + (value % 10);
+        value /= 10;
+    }
+
+    for (j = i - 1; j >= 0; j--) {
+        output[0] = buffer[j];
+        vga_puts(output);
+    }
+}
+
+static void cmd_ps(void)
+{
+    pcb_t *table = process_get_table();
+    int i;
+
+    vga_puts("\nPID   STATE\n");
+    vga_puts("----------------\n");
+
+    for (i = 0; i < MAX_PROCESSES; i++) {
+
+        if (table[i].state != PROCESS_UNUSED) {
+
+            print_number(table[i].pid);
+
+            vga_puts("     ");
+            vga_puts(process_state_name(table[i].state));
+            vga_puts("\n");
+        }
+    }
+}
+
+
+
 static void shell_run(void) {
     vga_puts_color("\n  Kernel Shell ready. Type 'help' for commands.\n",
                    VGA_LIGHT_GREEN, VGA_BLACK);
@@ -188,9 +260,25 @@ static void shell_run(void) {
             continue;
         }
 
+	 if (k_strcmp(cmd, "ps") == 0) {
+   	 cmd_ps();
+   	 continue;
+	}
+
+	if (k_strcmp(cmd, "schedtest") == 0) {
+    vga_puts("Process 1 counter: ");
+    print_number(process_one_count);
+
+    vga_puts("\nProcess 2 counter: ");
+    print_number(process_two_count);
+
+    vga_puts("\n");
+
+    continue;
+}
+
         /* Milestone stubs */
-        if (k_strcmp(cmd, "ps")      == 0 ||
-            k_strcmp(cmd, "kill")    == 0 ||
+        if (k_strcmp(cmd, "kill")    == 0 ||
             k_strcmp(cmd, "threads") == 0 ||
             k_strcmp(cmd, "free")    == 0 ||
             k_strcmp(cmd, "ls")      == 0 ||
@@ -207,12 +295,46 @@ static void shell_run(void) {
     }
 }
 
+
+static void process_one(void)
+{
+    while (1) {
+        process_one_count++;
+    }
+}
+
+static void process_two(void)
+{
+    while (1) {
+        process_two_count++;
+    }
+}
+
 /* ---------------------------------------------------------------------------
  * Kernel entry point – called from kernel_entry.asm
  * --------------------------------------------------------------------------*/
 void kernel_main(void) {
     vga_init();
     kb_init();
+
+    process_init();
+    scheduler_init();
+
+    create_process(process_one);
+    create_process(process_two);
+
+    idt_init();
+
+    pic_remap();
+
+    idt_set_gate(32, (unsigned int)irq0_handler);
+
+    timer_init(100);
+
+    pic_enable_irq(0);
+
+    __asm__ __volatile__("sti");
+
     print_splash();
     shell_run();
 
