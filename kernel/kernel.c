@@ -29,9 +29,12 @@
 #include "pic.h"
 #include "timer.h"
 #include "scheduler.h"
-
+#include "thread.h"
 static volatile unsigned int process_one_count = 0;
 static volatile unsigned int process_two_count = 0;
+static volatile unsigned int thread_one_count = 0;
+static volatile unsigned int thread_two_count = 0;
+
 
 /* ---------------------------------------------------------------------------
  * Forward declarations of shell commands
@@ -235,7 +238,15 @@ static void cmd_ps(void)
     }
 }
 
+static void cmd_threadtest(void) {
+    vga_puts("Thread 1 counter: ");
+    print_number(thread_one_count);
 
+    vga_puts("\nThread 2 counter: ");
+    print_number(thread_two_count);
+
+    vga_puts("\n");
+}
 
 static void shell_run(void) {
     vga_puts_color("\n  Kernel Shell ready. Type 'help' for commands.\n",
@@ -265,6 +276,11 @@ static void shell_run(void) {
    	 continue;
 	}
 
+	if (k_strcmp(cmd, "threadtest") == 0) {
+        cmd_threadtest();
+        continue;
+    }
+
 	if (k_strcmp(cmd, "schedtest") == 0) {
     vga_puts("Process 1 counter: ");
     print_number(process_one_count);
@@ -274,8 +290,21 @@ static void shell_run(void) {
 
     vga_puts("\n");
 
+	if (k_strcmp(cmd, "threadtest") == 0) {
+        vga_puts("Thread 1 counter: ");
+        print_number(thread_one_count);
+
+        vga_puts("\nThread 2 counter: ");
+        print_number(thread_two_count);
+
+        vga_puts("\n");
+
+        continue;
+    }
+
     continue;
 }
+
 
         /* Milestone stubs */
         if (k_strcmp(cmd, "kill")    == 0 ||
@@ -310,6 +339,24 @@ static void process_two(void)
     }
 }
 
+
+
+static void thread_one(void)
+{
+    while (1) {
+        thread_one_count++;
+	thread_yield();
+    }
+}
+
+static void thread_two(void)
+{
+    while (1) {
+        thread_two_count++;
+	thread_yield();
+    }
+}
+
 /* ---------------------------------------------------------------------------
  * Kernel entry point – called from kernel_entry.asm
  * --------------------------------------------------------------------------*/
@@ -322,6 +369,10 @@ void kernel_main(void) {
 
     create_process(process_one);
     create_process(process_two);
+
+    thread_init();   
+    thread_create(thread_one);
+    thread_create(thread_two);
 
     idt_init();
 
