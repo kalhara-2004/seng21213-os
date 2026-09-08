@@ -34,6 +34,8 @@
 #include "vmm.h"
 #include "ramfs.h"
 #include "syscall.h"
+#include "sync.h"
+
 
 static volatile unsigned int process_one_count = 0;
 static volatile unsigned int process_two_count = 0;
@@ -295,6 +297,35 @@ void process_b(void) {
     sys_exit();
 }
 
+static mutex_t test_mutex;
+static volatile int shared_counter = 0;
+
+void thread_worker_a(void) {
+    for (int i = 0; i < 3; i++) {
+        mutex_lock(&test_mutex);
+        shared_counter++;
+        vga_puts("[Thread A] Acquired mutex, counter = ");
+        // Print character count or simple notification
+        vga_puts("incremented\n");
+        mutex_unlock(&test_mutex);
+        for (volatile int d = 0; d < 5000000; d++);
+    }
+    sys_exit();
+}
+
+void thread_worker_b(void) {
+    for (int i = 0; i < 3; i++) {
+        mutex_lock(&test_mutex);
+        shared_counter++;
+        vga_puts("[Thread B] Acquired mutex, counter = ");
+        vga_puts("incremented\n");
+        mutex_unlock(&test_mutex);
+        for (volatile int d = 0; d < 5000000; d++);
+    }
+    sys_exit();
+}
+
+
 static void shell_run(void) {
     vga_puts_color("\n  Kernel Shell ready. Type 'help' for commands.\n",
                    VGA_LIGHT_GREEN, VGA_BLACK);
@@ -394,11 +425,29 @@ if (k_strcmp(cmd, "runprocs") == 0) {
     continue;
 }
 
+
+if (k_strcmp(cmd, "threads") == 0) {
+    mutex_init(&test_mutex);
+    shared_counter = 0;
+
+    int pid1 = create_process(thread_worker_a);
+    int pid2 = create_process(thread_worker_b);
+    vga_puts("Threads A and B started with Mutex sync!\n");
+
+    __asm__ __volatile__("sti");
+
+    pcb_t *table = process_get_table();
+    while (table[pid1].state != PROCESS_TERMINATED || table[pid2].state != PROCESS_TERMINATED) {
+        __asm__ __volatile__("hlt");
+    }
+
+    vga_puts("\nAll threads finished execution.\n");
+    continue;
+}
+
         /* Milestone stubs */
         if (k_strcmp(cmd, "kill")    == 0 ||
-            k_strcmp(cmd, "threads") == 0 ||
             k_strcmp(cmd, "free")    == 0) {
-
             vga_puts_color("  [TODO] This command is not yet implemented.\n",
                            VGA_YELLOW, VGA_BLACK);
             vga_puts("  Implement it as part of your lecture assignment.\n");

@@ -65,7 +65,8 @@ KERNEL_C_SRCS  := kernel/kernel.c \
                    kernel/pmm.c\
                    kernel/vmm.c\
                    kernel/ramfs.c\
-                   kernel/syscall.c
+                   kernel/syscall.c \
+		   kernel/sync.c
 
 # Add your new source files below as the course progresses:
 # Lecture 09: kernel/process.c kernel/scheduler.c
