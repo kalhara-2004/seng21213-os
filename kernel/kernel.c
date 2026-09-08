@@ -30,6 +30,9 @@
 #include "timer.h"
 #include "scheduler.h"
 #include "thread.h"
+#include "pmm.h"
+
+
 static volatile unsigned int process_one_count = 0;
 static volatile unsigned int process_two_count = 0;
 static volatile unsigned int thread_one_count = 0;
@@ -248,6 +251,28 @@ static void cmd_threadtest(void) {
     vga_puts("\n");
 }
 
+static void cmd_memtest(void) {
+    vga_puts("Free blocks: ");
+    print_number(pmm_get_free_block_count());
+
+    vga_puts("\nAllocating 1 block...\n");
+    void *ptr = pmm_alloc_block();
+
+    vga_puts("Allocated address: ");
+    print_number((uint32_t)ptr);
+
+    vga_puts("\nFree blocks: ");
+    print_number(pmm_get_free_block_count());
+
+    vga_puts("\nFreeing block...\n");
+    pmm_free_block(ptr);
+
+    vga_puts("Free blocks: ");
+    print_number(pmm_get_free_block_count());
+    vga_puts("\n");
+}
+
+
 static void shell_run(void) {
     vga_puts_color("\n  Kernel Shell ready. Type 'help' for commands.\n",
                    VGA_LIGHT_GREEN, VGA_BLACK);
@@ -265,6 +290,11 @@ static void shell_run(void) {
         if (k_strcmp(cmd, "clear") == 0) { cmd_clear(); continue; }
         if (k_strcmp(cmd, "about") == 0) { cmd_about(); continue; }
         if (k_strcmp(cmd, "mem")   == 0) { cmd_mem();   continue; }
+
+	if (k_strcmp(cmd, "memtest") == 0) {
+    cmd_memtest();
+    continue;
+}
 
         if (k_strncmp(cmd, "echo ", 5) == 0) {
             cmd_echo(k_ltrim(cmd + 5));
@@ -363,6 +393,7 @@ static void thread_two(void)
 void kernel_main(void) {
     vga_init();
     kb_init();
+    pmm_init(32 * 1024 * 1024);
 
     process_init();
     scheduler_init();
