@@ -345,6 +345,15 @@ if (k_strncmp(cmd, "cat ", 4) == 0) {
     continue;
 }
 
+if (k_strcmp(cmd, "syscalltest") == 0) {
+    const char *msg = "Hello from int 0x80 syscall!\n";
+    __asm__ __volatile__ (
+        "int $0x80\n"
+        :
+        : "a"(1), "b"(msg)
+    );
+    continue;
+}
 
         /* Milestone stubs */
         if (k_strcmp(cmd, "kill")    == 0 ||
@@ -421,7 +430,7 @@ ramfs_create("hello.txt", "Hello from RAMFS!");
 
     pic_remap();
 
-    idt_set_gate(32, (unsigned int)irq0_handler);
+    idt_set_gate(32, (unsigned int)irq0_handler,0x8E);
 
     timer_init(100);
 
