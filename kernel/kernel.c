@@ -31,6 +31,7 @@
 #include "scheduler.h"
 #include "thread.h"
 #include "pmm.h"
+#include "vmm.h"
 
 
 static volatile unsigned int process_one_count = 0;
@@ -394,6 +395,7 @@ void kernel_main(void) {
     vga_init();
     kb_init();
     pmm_init(32 * 1024 * 1024);
+    vmm_init();
 
     process_init();
     scheduler_init();

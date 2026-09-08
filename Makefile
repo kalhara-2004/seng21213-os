@@ -60,7 +60,8 @@ KERNEL_C_SRCS  := kernel/kernel.c \
                    kernel/scheduler.c\
 		   kernel/string.c \
                    kernel/thread.c\
-                   kernel/pmm.c
+                   kernel/pmm.c\
+                   kernel/vmm.c
 
 # Add your new source files below as the course progresses:
 # Lecture 09: kernel/process.c kernel/scheduler.c
