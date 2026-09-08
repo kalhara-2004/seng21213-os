@@ -47,3 +47,6 @@ unsigned int scheduler_switch(unsigned int current_esp)
 
     return current_esp;
 }
+int scheduler_get_current(void) {
+    return current_index;
+}

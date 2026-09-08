@@ -1,7 +1,10 @@
 #include "idt.h"
+#include <stdint.h>
 
 #define IDT_ENTRIES 256
 #define KERNEL_CODE_SEGMENT 0x08
+extern void syscall_handler(void);
+extern void syscall_stub(void);
 
 typedef struct {
     unsigned short offset_low;
@@ -19,17 +22,13 @@ typedef struct {
 static idt_entry_t idt[IDT_ENTRIES];
 static idt_ptr_t idt_ptr;
 
-void idt_set_gate(int vector, unsigned int handler)
+void idt_set_gate(int vector, unsigned int handler,uint8_t flags)
 {
-    idt[vector].offset_low = handler & 0xFFFF;
+   idt[vector].offset_low = handler & 0xFFFF;
     idt[vector].selector = KERNEL_CODE_SEGMENT;
     idt[vector].zero = 0;
-
-    /* Present, Ring 0, 32-bit interrupt gate */
-    idt[vector].type_attr = 0x8E;
-
-    idt[vector].offset_high =
-        (handler >> 16) & 0xFFFF;
+    idt[vector].type_attr = flags;
+    idt[vector].offset_high = (handler >> 16) & 0xFFFF;
 }
 
 void idt_init(void)
@@ -49,6 +48,8 @@ void idt_init(void)
 
     idt_ptr.base =
         (unsigned int)&idt;
+
+	idt_set_gate(0x80, (unsigned int)syscall_stub, 0xEE);
 
     /*
      * Do NOT enable interrupts here.

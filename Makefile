@@ -45,10 +45,12 @@ BOOT_SRC  := boot/boot.asm
 BOOT_BIN  := boot/boot.bin
 
 KERNEL_ASM_SRCS := kernel/kernel_entry.asm \
-                   kernel/irq0.asm
+                   kernel/irq0.asm \
+          	   kernel/syscall_asm.asm
 
 KERNEL_ASM_OBJS := build/kernel_entry.o \
-                   build/irq0.o
+                   build/irq0.o \
+                   build/syscall_asm.o
 
 KERNEL_C_SRCS  := kernel/kernel.c \
                    kernel/vga.c    \
@@ -62,7 +64,8 @@ KERNEL_C_SRCS  := kernel/kernel.c \
                    kernel/thread.c\
                    kernel/pmm.c\
                    kernel/vmm.c\
-                   kernel/ramfs.c
+                   kernel/ramfs.c\
+                   kernel/syscall.c
 
 # Add your new source files below as the course progresses:
 # Lecture 09: kernel/process.c kernel/scheduler.c

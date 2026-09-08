@@ -33,6 +33,7 @@
 #include "pmm.h"
 #include "vmm.h"
 #include "ramfs.h"
+#include "syscall.h"
 
 static volatile unsigned int process_one_count = 0;
 static volatile unsigned int process_two_count = 0;
@@ -273,6 +274,26 @@ static void cmd_memtest(void) {
     vga_puts("\n");
 }
 
+void sys_write(const char *msg);
+void sys_exit(void);
+
+void process_a(void) {
+    for (int i = 0; i < 5; i++) {
+        sys_write("[Proc A] Working...\n");
+        for (volatile int delay = 0; delay < 20000000; delay++);
+    }
+    sys_write("[Proc A] Finished!\n");
+    sys_exit();
+}
+
+void process_b(void) {
+    for (int i = 0; i < 5; i++) {
+        sys_write("[Proc B] Working...\n");
+        for (volatile int delay = 0; delay < 20000000; delay++);
+    }
+    sys_write("[Proc B] Finished!\n");
+    sys_exit();
+}
 
 static void shell_run(void) {
     vga_puts_color("\n  Kernel Shell ready. Type 'help' for commands.\n",
@@ -352,6 +373,24 @@ if (k_strcmp(cmd, "syscalltest") == 0) {
         :
         : "a"(1), "b"(msg)
     );
+    continue;
+}
+
+if (k_strcmp(cmd, "runprocs") == 0) {
+    create_process(process_a);
+    create_process(process_b);
+    vga_puts("Processes A and B created! Yielding CPU...\n");
+
+    // Enable hardware interrupts
+    __asm__ __volatile__("sti");
+
+    // Wait until both process A (PID 1) and process B (PID 2) terminate
+    pcb_t *table = process_get_table();
+    while (table[1].state != PROCESS_TERMINATED || table[2].state != PROCESS_TERMINATED) {
+        __asm__ __volatile__("hlt");
+    }
+
+    vga_puts("\nAll processes finished execution.\n");
     continue;
 }
 
