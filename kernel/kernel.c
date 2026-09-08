@@ -32,7 +32,7 @@
 #include "thread.h"
 #include "pmm.h"
 #include "vmm.h"
-
+#include "ramfs.h"
 
 static volatile unsigned int process_one_count = 0;
 static volatile unsigned int process_two_count = 0;
@@ -336,13 +336,21 @@ static void shell_run(void) {
     continue;
 }
 
+if (k_strcmp(cmd, "ls") == 0) {
+    ramfs_list();
+    continue;
+}
+if (k_strncmp(cmd, "cat ", 4) == 0) {
+    ramfs_read(k_ltrim(cmd + 4));
+    continue;
+}
+
 
         /* Milestone stubs */
         if (k_strcmp(cmd, "kill")    == 0 ||
             k_strcmp(cmd, "threads") == 0 ||
-            k_strcmp(cmd, "free")    == 0 ||
-            k_strcmp(cmd, "ls")      == 0 ||
-            k_strcmp(cmd, "cat")     == 0) {
+            k_strcmp(cmd, "free")    == 0) {
+
             vga_puts_color("  [TODO] This command is not yet implemented.\n",
                            VGA_YELLOW, VGA_BLACK);
             vga_puts("  Implement it as part of your lecture assignment.\n");
@@ -396,6 +404,8 @@ void kernel_main(void) {
     kb_init();
     pmm_init(32 * 1024 * 1024);
     vmm_init();
+   ramfs_init();
+ramfs_create("hello.txt", "Hello from RAMFS!");
 
     process_init();
     scheduler_init();
