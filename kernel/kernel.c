@@ -52,6 +52,10 @@ static void cmd_about(void);
 static void cmd_echo(const char *args);
 static void cmd_mem(void);
 extern void irq0_handler(void);
+static void cmd_ls(void);
+static void cmd_cat(const char *filename);
+static void cmd_touch(const char *filename);
+
 /* ---------------------------------------------------------------------------
  * Utility: minimal string helpers (no libc in a freestanding kernel!)
  * --------------------------------------------------------------------------*/
@@ -182,6 +186,30 @@ static void cmd_mem(void) {
     pmm_free_block(p2);
 
     vga_puts_color("  Blocks freed successfully.\n\n", VGA_GREEN, VGA_BLACK);
+}
+
+static void cmd_ls(void) {
+    ramfs_list();
+}
+
+static void cmd_cat(const char *filename) {
+    if (*filename == '\0') {
+        vga_puts("Usage: cat <filename>\n");
+        return;
+    }
+    ramfs_read(filename);
+}
+
+static void cmd_touch(const char *filename) {
+    if (*filename == '\0') {
+        vga_puts("Usage: touch <filename>\n");
+        return;
+    }
+    if (ramfs_create(filename, "Default content") == 0) {
+        vga_puts("File created successfully.\n");
+    } else {
+        vga_puts("Failed to create file.\n");
+    }
 }
 
 /* ---------------------------------------------------------------------------
@@ -452,6 +480,10 @@ if (k_strcmp(cmd, "threads") == 0) {
     continue;
 }
 
+if (k_strcmp(cmd, "ls") == 0) { cmd_ls(); continue; }
+if (k_strncmp(cmd, "cat ", 4) == 0) { cmd_cat(k_ltrim(cmd + 4)); continue; }
+if (k_strncmp(cmd, "touch ", 6) == 0) { cmd_touch(k_ltrim(cmd + 6)); continue; }
+
         /* Milestone stubs */
         if (k_strcmp(cmd, "kill")    == 0 ||
             k_strcmp(cmd, "free")    == 0) {
@@ -466,6 +498,7 @@ if (k_strcmp(cmd, "threads") == 0) {
         vga_puts("\n  Type 'help' for a list of commands.\n");
     }
 }
+
 
 
 static void process_one(void)
