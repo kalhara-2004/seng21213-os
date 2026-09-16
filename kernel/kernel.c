@@ -165,16 +165,23 @@ static void cmd_echo(const char *args) {
 }
 
 static void cmd_mem(void) {
-    /* Stage 0 stub – students implement the real PMM in Lecture 11 */
-    vga_puts_color("\n  Memory Map (stub – implement PMM in Lecture 11)\n",
-                   VGA_LIGHT_CYAN, VGA_BLACK);
-    vga_puts("  ─────────────────────────────────────────────\n");
-    vga_puts("  0x00000000 – 0x000FFFFF  :  First 1 MB (reserved/BIOS)\n");
-    vga_puts("  0x00100000 – 0x00EFFFFF  :  Extended memory (usable ~14 MB)\n");
-    vga_puts("  0x00F00000 – 0x00FFFFFF  :  BIOS / ROM area\n");
-    vga_puts("  0xB8000    – 0xBFFFF     :  VGA frame buffer\n");
-    vga_puts_color("\n  TODO: Use BIOS int 0x15, EAX=0xE820 to get real memory map\n\n",
-                   VGA_YELLOW, VGA_BLACK);
+    vga_puts_color("\n  PMM Allocation Test (Lecture 11)\n", VGA_LIGHT_CYAN, VGA_BLACK);
+    vga_puts("  ---------------------------------------\n");
+
+    void *p1 = pmm_alloc_block();
+    void *p2 = pmm_alloc_block();
+
+    if (p1 && p2) {
+        vga_puts("  Block 1 allocated successfully.\n");
+        vga_puts("  Block 2 allocated successfully.\n");
+    } else {
+        vga_puts_color("  Allocation failed!\n", VGA_LIGHT_RED, VGA_BLACK);
+    }
+
+    pmm_free_block(p1);
+    pmm_free_block(p2);
+
+    vga_puts_color("  Blocks freed successfully.\n\n", VGA_GREEN, VGA_BLACK);
 }
 
 /* ---------------------------------------------------------------------------
@@ -479,8 +486,7 @@ static void process_two(void)
 
 static void thread_one(void)
 {
-    while (1) {
-        thread_one_count++;
+    while (1) {        thread_one_count++;
 	thread_yield();
     }
 }
@@ -492,6 +498,7 @@ static void thread_two(void)
 	thread_yield();
     }
 }
+
 
 /* ---------------------------------------------------------------------------
  * Kernel entry point – called from kernel_entry.asm
